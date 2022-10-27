@@ -60,6 +60,57 @@ contract CSAMM {
         //transfer token out
         tokenOut.transfer(msg.sender,  amountOut);
     }
-    function addLiquidity() external {}
-    function removeLiquidity() external {}
+    function addLiquidity(uint _amount0, uint _amount1) external returns(uint shares){
+        token0.transferFrom(msg.sender, address(this), _amount0);
+        token1.transferFrom(msg.sender, address(this), _amount1);
+
+        uint bal0 = token0.balanceOf(address(this));
+        uint bal1 = token1.balanceOf(address(this));
+
+        uint d0 = bal0 - reserve0 ;
+        uint d1 = bal1 - reserve1 ;
+
+        /*
+        a = amount in
+        L = total liquidity
+        s = shares to mint
+        T = total supply
+
+        s should be proportional to increase from L to L + a
+        (L + a) / L = (T + s) / T
+
+        s = a * T / L
+        */
+
+        if(totalSupply > 0)
+        {
+            shares = d0 + d1;
+        }
+        else 
+        {
+            shares = ((d0 + d1) * totalSupply)/(reserve0 + reserve1);
+        }
+
+        require(shares > 0 , "shares = 0");
+        _mint(msg.sender, shares);
+        _update(bal0, bal1);
+    }
+
+    function removeLiquidity(uint _shares) external returns(uint d0, uint d1){
+        d0 = (reserve0 * _shares) / totalSupply;
+        d1 = (reserve1 * _shares) / totalSupply;
+
+        _burn(msg.sender, _shares);
+        _update(reserve0 - d0, reserve1 - d1);
+
+        if(d0>0)
+        {
+            token0.transfer(msg.sender, d0);
+        }
+
+        else
+        {
+            token1.transfer(msg.sender, d1);
+        }
+    }
 }
