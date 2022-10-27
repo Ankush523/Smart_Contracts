@@ -42,44 +42,23 @@ contract CSAMM {
         require(_tokenIn == address(token0) || _tokenIn == address(token1), "Invalid token");
 
         bool isToken0 = _tokenIn==address(token0);
-        (IERC20 tokenIn, IERC20 tokenOut) = isToken0 ? (token0,token1) : (token1,token0);
+        (IERC20 tokenIn, IERC20 tokenOut, uint resIn, uint resOut) = isToken0 ? (token0,token1,reserve0,reserve1) : (token1,token0,reserve0,reserve1);
 
-        //transfer token in
-        uint amountIn;
-        if(_tokenIn == address(token0))
-        {
-            token0.transferFrom(msg.sender, address(this), _amountIn);
-            amountIn = token0.balanceOf(address(this)) - reserve0;
-        }
-        else
-        {
-            token1.transferFrom(msg.sender, address(this), _amountIn);
-            amountIn = token1.balanceOf(address(this)) - reserve0;
-        }
+        //transfer token in       
+        tokenIn.transferFrom(msg.sender, address(this), _amountIn);
+        uint amountIn = tokenIn.balanceOf(address(this)) - resIn;
 
         //calculate amount out
         // dx=dy
         // 0.3% trading fee
         amountOut = (amountIn * 997)/1000;
         //update reserve0 and reserve1
-        if(_tokenIn == address(token0))
-        {
-            _update(reserve0 + _amountIn, reserve1 - amountOut);
-        }
-        else 
-        {
-            _update(reserve0 - amountOut, reserve1 + _amountIn);
-        }
+
+        (uint res0, uint res1) = isToken0 ? (resIn + _amountIn, resOut - amountOut) : (resOut - amountOut, resIn + _amountIn);
+        _update(res0, res1);
 
         //transfer token out
-        if(_tokenIn == address(token0))
-        {
-            token0.transfer(msg.sender,  amountOut);
-        }
-        else 
-        {
-            token1.transfer(msg.sender, amountOut);
-        }
+        tokenOut.transfer(msg.sender,  amountOut);
     }
     function addLiquidity() external {}
     function removeLiquidity() external {}
